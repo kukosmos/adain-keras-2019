@@ -9,9 +9,9 @@ class Encoder(models.Model):
     assert len(encoder_layers) > 0, 'No "encoder_layers" is provided.'
     
     super(Encoder, self).__init__(name=name, **kwargs)
-    vgg = VGG19(input_tensor=layers.Input(shape=input_shape))
+    vgg = VGG19(input_tensor=layers.Input(shape=input_shape), include_top=False)
     output_layers = [vgg.get_layer(layer_name).output for layer_name in encoder_layers]
-    self.encoder = models.Model(inputs=vgg.input, outputs=output_layers)
+    self.encoder = models.Model(inputs=vgg.input, outputs=output_layers, name='encoder')
 
   def call(self, x):
     return self.encoder(x)
