@@ -2,6 +2,7 @@ from tensorflow.keras.applications.vgg19 import VGG19
 
 import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
+import tensorflow.keras.models as models
 
 class Encoder(keras.Model):
   def __init__(self, name='encoder', **kwargs):
@@ -13,6 +14,20 @@ class Encoder(keras.Model):
 class Decoder(keras.Model):
   def __init__(self, name='decoder', **kwargs):
     super(Decoder, self).__init__(name=name, **kwargs)
+    self.decoder = models.Sequential([
+      layers.Conv2D,
+      layers.Upsample(size=2, interpolation='nearest'),
+      layers.Conv2D,
+      layers.Conv2D,
+      layers.Conv2D,
+      layers.Conv2D,
+      layers.Upsample(size=2, interpolation='nearest'),
+      layers.Conv2D,
+      layers.Conv2D,
+      layers.Upsample(size=2, interpolation='nearest'),
+      layers.Conv2D,
+      layers.Conv2D
+    ])
 
   def call(self):
     raise NotImplemented
