@@ -16,10 +16,15 @@ class Encoder(models.Model):
   def call(self, x):
     return self.encoder(x)
 
+class ReflectPad(layers.Layer):
+  def __init__(self, name='reflect', *args, **kwargs):
+    super(ReflectPad, self).__init__(name=name, **kwargs)
+
 class Decoder(models.Model):
   def __init__(self, name='decoder', **kwargs):
     super(Decoder, self).__init__(name=name, **kwargs)
     self.decoder = models.Sequential([
+      
       layers.Conv2D,
       layers.Upsample(size=2, interpolation='nearest'),
       layers.Conv2D,
