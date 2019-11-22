@@ -34,26 +34,26 @@ class Decoder(models.Model):
     super(Decoder, self).__init__(name=name, **kwargs)
     self.decoder = models.Sequential([
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(256, (3, 3)),
       layers.Upsample(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(256, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(256, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(256, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(128, (3, 3)),
       layers.Upsample(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(128, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(64, (3, 3)),
       layers.Upsample(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(),
+      layers.Conv2D(64, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D()
+      layers.Conv2D(3, (3, 3))
     ])
 
   def call(self, x):
