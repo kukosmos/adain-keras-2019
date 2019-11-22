@@ -1,38 +1,36 @@
 assert __name__ == '__main__', 'This file cannot be imported.'
 
-import tensorflow as tf
+import argparse
 
-flags = tf.compat.v1.flags
+parser = argparse.ArgumentParser(description='AdaIN Keras training script')
 
 # necessary arguments
-flags.DEFINE_string('content_dir', None, 'Directory with content images', short_name='cd')
-flags.DEFINE_string('style_dir', None, 'Directory with style images', short_name='sd')
-flags.mark_flag_as_required('content_dir')
-flags.mark_flag_as_required('style_dir')
+parser.add_argument('-cd', '--content-dir', type=str, metavar='<dir>', required=True, help='Directory with content images')
+parser.add_argument('-sd', '--style-dir', type=str, metavar='<dir>', required=True, help='Directory with style images')
 
 # optional arguments for training
-flags.DEFINE_string('save_dir', './experiments', 'Directory to save trained models, default=./experiments')
-flags.DEFINE_string('log-dir', './logs', 'Directory to save logs, default=./logs')
-flags.DEFINE_integer('log_image_every', 100, 'Period for loging generated images, non-positive for disabling, default=100')
-flags.DEFINE_integer('save_interval', 10000, 'Period for saving model, default=10000')
-flags.DEFINE_integer('n_threads', 2, 'Number of threads used for dataloader, default=2')
+parser.add_argument('--save-dir', type=str, metavar='<dir>', default='./experiments', help='Directory to save trained models, default=./experiments')
+# flags.DEFINE_string('log-dir', './logs', 'Directory to save logs, default=./logs')
+# flags.DEFINE_integer('log_image_every', 100, 'Period for loging generated images, non-positive for disabling, default=100')
+# flags.DEFINE_integer('save_interval', 10000, 'Period for saving model, default=10000')
+# flags.DEFINE_integer('n_threads', 2, 'Number of threads used for dataloader, default=2')
 
 # hyper-parameters
-flags.DEFINE_float('learning_rate', 1e-4, 'Learning rate, default=1e-4')
-flags.DEFINE_float('learning_rate_decay', 5e-5, 'Learning rate decay, default=5e-5')
-flags.DEFINE_integer('max_iter', 160000, 'Maximun number of iteration, default=160000')
-flags.DEFINE_integer('batch_size', 8, 'Size of the batch, default=8')
-flags.DEFINE_float('style_weight', 10.0, 'Weight of style loss, default=10.0')
-flags.DEFINE_float('content_weight', 1.0, 'Weight of content loss, default=1.0')
+parser.add_argument('-lr', '--learning-rate', type=float, metavar='<float>', default=1e-4, help='Learning rate, default=1e-4')
+parser.add_argument('-lrd', '--learning-rate-decay', type=float, metavar='<float>', default=5e-5, help='Learning rate decay, default=5e-5')
+parser.add_argument('--max-iter', type=int, metavar='<int>', default=160000, help='Maximun number of iteration, default=160000')
+parser.add_argument('-bs', '--batch-size', type=int, metavar='<int>', default=8, help='Size of the batch, default=8')
+parser.add_argument('--style-weight', type=float, metavar='<float>', default=10.0, help='Weight of style loss, default=10.0')
+parser.add_argument('--content-weight', type=float, metavar='<float>', default=1.0, help='Weight of content loss, default=1.0')
 
-FLAGS = flags.FLAGS
+args = parser.parse_args()
 
 import os
 import tensorflow.keras.backend as K
 
 from tensorflow.keras import optimizers
 from tensorflow.keras.models import Model, clone_model
-from tf.keras.layers import Lambda
+from tensorflow.keras.layers import Lambda
 
 from dataloader import * #not yet
 from network import AdaIN, Encoder, Decoder
@@ -61,18 +59,17 @@ def style_loss(style, g, eps=1e-5):
 def sum_loss(x, y, style_weight = 1, content_weight = 0):
   return content_weight * x + style_weight * y
 
-def main(self, argv):
-
+def main():
 
   # for handling errors
   Image.MAX_IMAGE_PIXELS = None
   ImageFile.LOAD_TRUNCATED_IMAGES = True
 
   # directory trained models
-  save_dir = Path(FLAGS.save_dir)
+  save_dir = Path(args.save_dir)
   save_dir.mkdir(exist_ok=True, parents=True)
   # directory for logs
-  log_dir = Path(FLAGS.log_dir)
+  log_dir = Path(args.log_dir)
   log_dir.mkdir(exist_ok=True, parents=True)
 
   # content dataset
@@ -88,29 +85,29 @@ def main(self, argv):
   decoder_output = Decoder()(adain)
   f_g = clone_model(encoder)(decoder_output)# ??
 
-  loss_content = Lambda(self.content_loss)(adain, f_g)
-  loss_style = Lambda(self.style_loss)(style_input, decoder_output)
-  loss = Lambda(self.sum_loss(style_weight=FLAGS.style_weight, content_weight=FLAGS.content_weight))(loss_content, loss_style)
+  loss_content = Lambda(content_loss)(adain, f_g)
+  loss_style = Lambda(style_loss)(style_input, decoder_output)
+  loss = Lambda(sum_loss(style_weight=args.style_weight, content_weight=args.content_weight))(loss_content, loss_style)
 
 
   model = Model(inputs=[content_input, style_input], outputs=[loss])
-  adam = optimizers.Adam(learning_rate=FLAGS.learning_rate)
+  adam = optimizers.Adam(learning_rate=args.learning_rate)
   model.compile(optimizer=adam, loss=lambda x, loss : loss)
 
   # log writer
   writer = SummaryWriter(log_dir=str(log_dir))
 
   # for maximum iteration
-  for i in tqdm(range(FLAGS.max_iter)):
+  for i in tqdm(range(args.max_iter)):
     # adjust learning rate
-    lr = learning_rate_decay(FLAGS.learning_rate, FLAGS.learning_rate_decay, i)
+    lr = learning_rate_decay(args.learning_rate, args.learning_rate_decay, i)
     K.set_value(model.optimizer.lr, lr)
 
     # get images
     content_images = [] # not yet
     style_images = [] # not yet
 
-    hist = model.fit([content_images, style_images], content_images, batch_size=FLAGS.batch_size)
+    hist = model.fit([content_images, style_images], content_images, batch_size=args.batch_size)
 
 
     generate_model = Model(inputs=[content_input, style_input], outputs=decoder_output)
@@ -118,19 +115,16 @@ def main(self, argv):
 
 
     writer.add_scalar('Loss/Loss', hist.history['loss'], i + 1)
-    if FLAGS.log_image_every > 0 and ((i + 1) % FLAGS.log_image_every == 0 or i == 0 or (i + 1) == FLAGS.max_iter):
+    if args.log_image_every > 0 and ((i + 1) % args.log_image_every == 0 or i == 0 or (i + 1) == args.max_iter):
       writer.add_image('Image/Content', content_images[0], i + 1)
       writer.add_image('Image/Style', style_images[0], i + 1)
       writer.add_image('Image/Generated', g[0], i + 1)
 
     # save model
-    if (i + 1) % FLAGS.save_interval == 0 or (i + 1) == FLAGS.max_iter:
+    if (i + 1) % args.save_interval == 0 or (i + 1) == args.max_iter:
       model.save(os.path.join(save_dir, 'iter_{}.pth'.format(i + 1)))
-
-
 
   writer.close()
 
-
-if __name__ == '__main__':
-    tf.compat.v1.app.run(main)
+# main entry
+main()
