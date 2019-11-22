@@ -16,31 +16,48 @@ class Encoder(models.Model):
   def call(self, x):
     return self.encoder(x)
 
-class ReflectPad(layers.Layer):
-  def __init__(self, name='reflect', *args, **kwargs):
-    super(ReflectPad, self).__init__(name=name, **kwargs)
+class ReflectionPad(layers.Layer):
+  def __init__(self, padding, name='reflection', *args, **kwargs):
+    super(ReflectionPad, self).__init__(name=name, **kwargs)
+    self.pad_left, self.pad_right, self.pad_top, self.pad_bottom = padding
+
+  def compute_output_shape(self, input_shape):
+    return (input_shape[0], input_shape[1] + self.pad_left + self.pad_right, input_shape[2], self.pad_top, self.pad_bottom, input_shape[3])
+
+  def call(self, x):
+    x = K.concatenate([K.reverse(x, 1)[:, (-1 - self.pad_left):-1, :, :], x, K.reverse(x, 1)[:, 1:(1 + self.pad_right), :, :]], axis=1)
+    x = K.concatenate([K.reverse(x, 2)[:, :, (-1 - self.pad_top):-1, :], x, K.reverse(x, 2)[:, :, 1:(1 + self.pad_bottom), :]], axis=2)
+    return x
 
 class Decoder(models.Model):
   def __init__(self, name='decoder', **kwargs):
     super(Decoder, self).__init__(name=name, **kwargs)
     self.decoder = models.Sequential([
-      
-      layers.Conv2D,
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
       layers.Upsample(size=2, interpolation='nearest'),
-      layers.Conv2D,
-      layers.Conv2D,
-      layers.Conv2D,
-      layers.Conv2D,
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
       layers.Upsample(size=2, interpolation='nearest'),
-      layers.Conv2D,
-      layers.Conv2D,
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
       layers.Upsample(size=2, interpolation='nearest'),
-      layers.Conv2D,
-      layers.Conv2D
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D(),
+      ReflectionPad((1, 1, 1, 1)),
+      layers.Conv2D()
     ])
 
-  def call(self):
-    raise NotImplemented
+  def call(self, x):
+    return self.decoder(x)
 
 class AdaIN(layers.Layer):
   def __init__(self, name='adain', alpha=1.0, **kwargs):
