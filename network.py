@@ -75,27 +75,20 @@ class Decoder(models.Model):
 
   def call(self, x):
     return self.decoder(x)
-
-class AdaIN(layers.Layer):
-  def __init__(self, name='adain', alpha=1.0, **kwargs):
-    super(AdaIN, self).__init__(name=name, **kwargs)
-    self.alpha = alpha
-
-  def compute_output_shape(self, input_shape):
-    return input_shape[0]
-
-  def call(self, x):
-    content_features, style_features = x
-    content_mean = K.mean(content_features, axis=[1, 2], keepdim=True)
-    content_var = K.variance(content_features, axis=[1, 2], keepdim=True)
-    style_mean = K.mean(style_features, axis=[1, 2], keepdim=True)
-    style_var = K.variance(style_features, axis=[1, 2], keepdim=True)
-    normalized_content_features = K.batch_normalization(content_features, content_mean, content_var, style_mean, K.sqrt(style_var), epsilon=1e-5)
-    return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
     
 class Stylizer(models.Model):
-  def __init__(self, name='stylizer', **kwargs):
+  def __init__(self, alpha=1.0, name='stylizer', **kwargs):
     super(Stylizer, self).__init__(name=name, **kwargs)
+    self.encoder = Encoder()
+    self.adain = AdaIN(alpha=alpha)
+    self.decoder = Decoder()
 
-  def call(self):
-    raise NotImplemented
+  def call(self, x):
+    contents, styles = x
+    content_features = self.encoder(contents)
+    style_features = self.encoder(styles)
+    normalized_features = self.adain([content_features, style_features])
+    return self.decoder(normalized_features)
+
+  def set_alpha(self, alpha=1.0):
+    self.adain.alpha = alpha
