@@ -35,11 +35,12 @@ class AdaIN(layers.Layer):
     return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
 
 class Encoder(models.Model):
-  def __init__(self, name='encoder', encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), **kwargs):
+  def __init__(self, encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), pretrained=True, name='encoder', **kwargs):
     assert len(encoder_layers) > 0, 'No "encoder_layers" is provided.'
     
     super(Encoder, self).__init__(name=name, **kwargs)
-    vgg = VGG19(input_tensor=layers.Input(shape=input_shape), include_top=False)
+    self.input = layers.Input(shape=input_shape)
+    vgg = VGG19(input_tensor=self.input, weights=('imagenet' if pretrained else None), include_top=False)
     output_layers = [vgg.get_layer(layer_name).output for layer_name in encoder_layers]
     self.encoder = models.Model(inputs=vgg.input, outputs=output_layers, name='encoder')
 
@@ -52,7 +53,7 @@ class Decoder(models.Model):
     self.decoder = models.Sequential([
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(256, (3, 3)),
-      layers.Upsample(size=2, interpolation='nearest'),
+      layers.UpSampling2D(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(256, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
@@ -61,12 +62,12 @@ class Decoder(models.Model):
       layers.Conv2D(256, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(128, (3, 3)),
-      layers.Upsample(size=2, interpolation='nearest'),
+      layers.UpSampling2D(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(128, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(64, (3, 3)),
-      layers.Upsample(size=2, interpolation='nearest'),
+      layers.UpSampling2D(size=2, interpolation='nearest'),
       ReflectionPad((1, 1, 1, 1)),
       layers.Conv2D(64, (3, 3)),
       ReflectionPad((1, 1, 1, 1)),
@@ -77,10 +78,10 @@ class Decoder(models.Model):
     return self.decoder(x)
     
 class Stylizer(models.Model):
-  def __init__(self, alpha=1.0, freeze_encoder=True, name='stylizer', **kwargs):
+  def __init__(self, alpha=1.0, pretrained=True, input_shape=(None, None, None, 3), name='stylizer', **kwargs):
     super(Stylizer, self).__init__(name=name, **kwargs)
-    self.encoder = Encoder()
-    if freeze_encoder:
+    self.encoder = Encoder(input_shape=input_shape, pretrained=pretrained)
+    if pretrained:
       for l in self.encoder.layers:
         l.trainable = False
     self.adain = AdaIN(alpha=alpha)
