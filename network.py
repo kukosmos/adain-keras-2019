@@ -10,7 +10,7 @@ class ReflectionPad(layers.Layer):
     self.pad_left, self.pad_right, self.pad_top, self.pad_bottom = padding
 
   def compute_output_shape(self, input_shape):
-    return (input_shape[0], input_shape[1] + self.pad_left + self.pad_right, input_shape[2], self.pad_top, self.pad_bottom, input_shape[3])
+    return (input_shape[0], input_shape[1] + self.pad_left + self.pad_right, input_shape[2] + self.pad_top + self.pad_bottom, input_shape[3])
 
   def call(self, x):
     x = K.concatenate([K.reverse(x, 1)[:, (-1 - self.pad_left):-1, :, :], x, K.reverse(x, 1)[:, 1:(1 + self.pad_right), :, :]], axis=1)
@@ -43,51 +43,27 @@ class Encoder(models.Model):
     super(Encoder, self).__init__(inputs=vgg.input, outputs=output_layers, name=name, **kwargs)
 
 class Decoder(models.Model):
-  def __init__(self, name='decoder', **kwargs):
-    super(Decoder, self).__init__(name=name, **kwargs)
-    self.decoder = models.Sequential([
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(256, (3, 3)),
-      layers.UpSampling2D(size=2, interpolation='nearest'),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(256, (3, 3)),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(256, (3, 3)),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(256, (3, 3)),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(128, (3, 3)),
-      layers.UpSampling2D(size=2, interpolation='nearest'),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(128, (3, 3)),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(64, (3, 3)),
-      layers.UpSampling2D(size=2, interpolation='nearest'),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(64, (3, 3)),
-      ReflectionPad((1, 1, 1, 1)),
-      layers.Conv2D(3, (3, 3))
-    ])
-
-  def call(self, x):
-    return self.decoder(x)
-    
-class Stylizer(models.Model):
-  def __init__(self, alpha=1.0, pretrained=True, input_shape=(None, None, 3), name='stylizer', **kwargs):
-    super(Stylizer, self).__init__(name=name, **kwargs)
-    self.encoder = Encoder(input_shape=input_shape, pretrained=pretrained)
-    if pretrained:
-      for l in self.encoder.layers:
-        l.trainable = False
-    self.adain = AdaIN(alpha=alpha)
-    self.decoder = Decoder()
-
-  def call(self, x):
-    contents, styles = x
-    content_features = self.encoder(contents)
-    style_features = self.encoder(styles)
-    normalized_features = self.adain([content_features, style_features])
-    return self.decoder(normalized_features)
-
-  def set_alpha(self, alpha=1.0):
-    self.adain.alpha = alpha
+  def __init__(self, input_shape=(None, None, 512), name='decoder', **kwargs):
+    input_layer = layers.Input(shape=input_shape)
+    out = ReflectionPad((1, 1, 1, 1), name='block4_reflection1')(input_layer)
+    out = layers.Conv2D(256, (3, 3), activation='relu', name='block4_conv1')(out)
+    out = layers.UpSampling2D(size=2, interpolation='nearest', name='block3_upsample')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block3_reflection4')(out)
+    out = layers.Conv2D(256, (3, 3), activation='relu', name='block3_conv4')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block3_reflection3')(out)
+    out = layers.Conv2D(256, (3, 3), activation='relu', name='block3_conv3')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block3_reflection2')(out)
+    out = layers.Conv2D(256, (3, 3), activation='relu', name='block3_conv2')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block3_reflection1')(out)
+    out = layers.Conv2D(128, (3, 3), activation='relu', name='block3_conv1')(out)
+    out = layers.UpSampling2D(size=2, interpolation='nearest', name='block2_upsample')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block2_reflection2')(out)
+    out = layers.Conv2D(128, (3, 3), activation='relu', name='block2_conv2')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block2_reflection1')(out)
+    out = layers.Conv2D(64, (3, 3), activation='relu', name='block2_conv1')(out)
+    out = layers.UpSampling2D(size=2, interpolation='nearest', name='block1_upsample')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block1_reflection2')(out)
+    out = layers.Conv2D(64, (3, 3), activation='relu', name='block1_conv2')(out)
+    out = ReflectionPad((1, 1, 1, 1), name='block1_reflection1')(out)
+    out = layers.Conv2D(3, (3, 3), name='block1_conv1')(out)
+    super(Decoder, self).__init__(inputs=input_layer, outputs=out, name=name, **kwargs)
