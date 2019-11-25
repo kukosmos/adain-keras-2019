@@ -22,7 +22,7 @@ class InfiniteImageFolderLoader(utils.Sequence):
     # order of images
     self.indices = []
     while len(self.indices) < n_per_epoch:
-      self.indices.extend(np.random.permutate(self.n_imagesx))
+      self.indices.extend(np.random.permutate(self.n_images))
     self.cur_indices = self.indices[:n_per_epoch]
     self.indices = self.indices[n_per_epoch:]
 
@@ -33,4 +33,8 @@ class InfiniteImageFolderLoader(utils.Sequence):
     raise NotImplemented
 
   def on_epoch_end(self):
-    raise NotImplemented
+    if len(self.indices) < self.n_per_epoch:
+      while len(self.indices) < self.n_per_epoch:
+        self.indices.extend(np.random.permutate(self.n_images))
+    self.cur_indices = self.indices[:self.n_per_epoch]
+    self.indices = self.indices[self.n_per_epoch:]
