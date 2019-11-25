@@ -77,9 +77,12 @@ class Decoder(models.Model):
     return self.decoder(x)
     
 class Stylizer(models.Model):
-  def __init__(self, alpha=1.0, name='stylizer', **kwargs):
+  def __init__(self, alpha=1.0, freeze_encoder=True, name='stylizer', **kwargs):
     super(Stylizer, self).__init__(name=name, **kwargs)
     self.encoder = Encoder()
+    if freeze_encoder:
+      for l in self.encoder.layers:
+        l.trainable = False
     self.adain = AdaIN(alpha=alpha)
     self.decoder = Decoder()
 
