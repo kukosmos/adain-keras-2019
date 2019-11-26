@@ -14,7 +14,7 @@ def random_crop(img, size=(256, 256)):
   elif len(size) == 2:
     dy, dx = size
     if dy > H:
-      dy = Hk
+      dy = H
     if dx > W:
       dx = W
   else:
