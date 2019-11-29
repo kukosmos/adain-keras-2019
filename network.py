@@ -27,10 +27,10 @@ class AdaIN(layers.Layer):
 
   def call(self, x):
     content_features, style_features = x
-    content_mean = K.mean(content_features, axis=[1, 2], keepdim=True)
-    content_var = K.variance(content_features, axis=[1, 2], keepdim=True)
-    style_mean = K.mean(style_features, axis=[1, 2], keepdim=True)
-    style_var = K.variance(style_features, axis=[1, 2], keepdim=True)
+    content_mean = K.mean(content_features, axis=[1, 2], keepdims=True)
+    content_var = K.variance(content_features, axis=[1, 2], keepdims=True)
+    style_mean = K.mean(style_features, axis=[1, 2], keepdims=True)
+    style_var = K.variance(style_features, axis=[1, 2], keepdims=True)
     normalized_content_features = K.batch_normalization(content_features, content_mean, content_var, style_mean, K.sqrt(style_var), epsilon=1e-5)
     return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
 
