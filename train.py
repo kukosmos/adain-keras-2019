@@ -48,12 +48,12 @@ FLAGS = flags.FLAGS
 
 def calculate_style_loss(x):
   style_features, generated_features = x
-  losses = [
+  loss = [
     losses.mean_squared_error(K.mean(style_feature), K.mean(generated_feature))
-    + losses.mean_squared_error(K.variance(style_feature), K.variance(generated_feature))
+    + losses.mean_squared_error(K.var(style_feature), K.var(generated_feature))
     for style_feature, generated_feature in zip(style_features, generated_features)
   ]
-  return K.sum(losses)
+  return K.sum(loss)
 
 def calculate_content_loss(x):
   content_features, generated_features = x
