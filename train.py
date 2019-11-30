@@ -50,7 +50,7 @@ def calculate_style_loss(x):
   y_trues, y_preds = x
   loss = [
     mse_loss(K.mean(y_true, axis=(1, 2), keepdims=True), K.mean(y_pred, axis=(1, 2), keepdims=True))
-    + mse_loss(K.var(y_true, axis=(1, 2), keepdims=True), K.var(y_pred, axis=(1, 2), keepdims=True))
+    + mse_loss(K.std(y_true, axis=(1, 2), keepdims=True), K.std(y_pred, axis=(1, 2), keepdims=True))
     for y_true, y_pred in zip(y_trues, y_preds)
   ]
   return K.sum(loss, keepdims=True)

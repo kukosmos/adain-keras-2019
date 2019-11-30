@@ -18,9 +18,10 @@ class ReflectionPad(layers.Layer):
     return x
 
 class AdaIN(layers.Layer):
-  def __init__(self, name='adain', alpha=1.0, **kwargs):
+  def __init__(self, name='adain', alpha=1.0, epsilon=1e-5, **kwargs):
     super(AdaIN, self).__init__(name=name, **kwargs)
     self.alpha = alpha
+    self.epsilon = epsilon
 
   def compute_output_shape(self, input_shape):
     return input_shape[0]
@@ -28,10 +29,10 @@ class AdaIN(layers.Layer):
   def call(self, x):
     content_features, style_features = x
     content_mean = K.mean(content_features, axis=[1, 2], keepdims=True)
-    content_var = K.var(content_features, axis=[1, 2], keepdims=True)
+    content_std = K.std(content_features, axis=[1, 2], keepdims=True)
     style_mean = K.mean(style_features, axis=[1, 2], keepdims=True)
-    style_var = K.var(style_features, axis=[1, 2], keepdims=True)
-    normalized_content_features = K.batch_normalization(content_features, content_mean, content_var, style_mean, K.sqrt(style_var), epsilon=1e-5)
+    style_std = K.std(style_features, axis=[1, 2], keepdims=True)
+    normalized_content_features = (content_features - content_mean) / (content_std + self.epsilon) *style_std + style_mean
     return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
 
 class Encoder(models.Model):
