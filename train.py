@@ -46,11 +46,11 @@ flags.DEFINE_integer('save_every', default=10, help='Number of epochs between ch
 
 FLAGS = flags.FLAGS
 
-def calculate_style_loss(x):
+def calculate_style_loss(x, epsilon=1e-5):
   y_trues, y_preds = x
   loss = [
     mse_loss(K.mean(y_true, axis=(1, 2), keepdims=True), K.mean(y_pred, axis=(1, 2), keepdims=True))
-    + mse_loss(K.std(y_true, axis=(1, 2), keepdims=True), K.std(y_pred, axis=(1, 2), keepdims=True))
+    + mse_loss(K.sqrt(K.var(y_true, axis=(1, 2), keepdims=True) + epsilon), K.sqrt(K.var(y_pred, axis=(1, 2), keepdims=True) + epsilon))
     for y_true, y_pred in zip(y_trues, y_preds)
   ]
   return K.sum(loss, keepdims=True)
@@ -117,6 +117,7 @@ def run():
   trainer = Model(inputs=[content_input, style_input], outputs=[loss])
   optim = optimizers.Adam(learning_rate=FLAGS.learning_rate)
   trainer.compile(optimizer=optim, loss=lambda _, y_pred: y_pred)
+  trainer.summary()
 
   # callbacks
   callbacks = [
