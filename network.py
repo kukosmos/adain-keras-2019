@@ -32,7 +32,7 @@ class AdaIN(layers.Layer):
     content_std = K.std(content_features, axis=[1, 2], keepdims=True)
     style_mean = K.mean(style_features, axis=[1, 2], keepdims=True)
     style_std = K.std(style_features, axis=[1, 2], keepdims=True)
-    normalized_content_features = (content_features - content_mean) / (content_std + self.epsilon) *style_std + style_mean
+    normalized_content_features = (content_features - content_mean) / (content_std + self.epsilon) * style_std + style_mean
     return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
 
 class Encoder(models.Model):
