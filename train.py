@@ -11,14 +11,14 @@ from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
 import tensorflow.keras.backend as K
-import tensorflow.keras.losses as losses
 import tensorflow.keras.optimizers as optimizers
 
 from dataloader import ContentStyleLoader
 from network import AdaIN
 from network import Encoder
 from network import Decoder
-from utils import rm_tree
+from utils import mse_loss
+from utils import rm_dir
 
 # dataset options
 flags.DEFINE_string('content_dir', default=None, help='Directory with content images', short_name='cd')
@@ -47,17 +47,17 @@ flags.DEFINE_integer('save_every', default=10, help='Number of epochs between ch
 FLAGS = flags.FLAGS
 
 def calculate_style_loss(x):
-  style_features, generated_features = x
+  y_trues, y_preds = x
   loss = [
-    losses.mean_squared_error(K.mean(style_feature, keepdims=True), K.mean(generated_feature, keepdims=True))
-    + losses.mean_squared_error(K.var(style_feature, keepdims=True), K.var(generated_feature, keepdims=True))
-    for style_feature, generated_feature in zip(style_features, generated_features)
+    mse_loss(K.mean(y_true, axis=(1, 2), keepdims=True), K.mean(y_pred, axis=(1, 2), keepdims=True))
+    + mse_loss(K.var(y_true, axis=(1, 2), keepdims=True), K.var(y_pred, axis=(1, 2), keepdims=True))
+    for y_true, y_pred in zip(y_trues, y_preds)
   ]
-  return K.sum(loss)
+  return K.sum(loss, keepdims=True)
 
 def calculate_content_loss(x):
-  content_features, generated_features = x
-  return losses.mean_squared_error(content_features[-1], generated_features[-1])
+  y_trues, y_preds = x
+  return mse_loss(y_trues[-1], y_preds[-1])
 
 def run():
 
@@ -69,7 +69,7 @@ def run():
   log_dir = Path(FLAGS.tensorboard)
   if log_dir.exists():
     logging.warning('"tensorboard={}" already exist. The directory and contents will be removed.'.format(FLAGS.tensorboard))
-    rm_tree(log_dir)
+    rm_dir(log_dir)
   log_dir.mkdir(exist_ok=True)
 
   # to handle errors while loading images
@@ -109,9 +109,9 @@ def run():
 
   # loss calculation
   generated_features = encoder(generated)
-  content_loss = Lambda(calculate_content_loss)([content_features, generated_features])
-  style_loss = Lambda(calculate_style_loss)([style_features, generated_features])
-  loss = Lambda(lambda x: FLAGS.content_weight * x[0] + FLAGS.style_weight * x[1])([content_loss, style_loss])
+  content_loss = Lambda(calculate_content_loss, name='content_loss')([content_features, generated_features])
+  style_loss = Lambda(calculate_style_loss, name='style_loss')([style_features, generated_features])
+  loss = Lambda(lambda x: FLAGS.content_weight * x[0] + FLAGS.style_weight * x[1], name='loss')([content_loss, style_loss])
 
   # trainer
   trainer = Model(inputs=[content_input, style_input], outputs=[loss])
@@ -125,7 +125,7 @@ def run():
     # Tensor Board
     TensorBoard(str(log_dir), write_graph=False, update_freq='batch'),
     # save model
-    ModelCheckpoint(str(save_dir / 'epoch-{epoch:d}.h5'), save_best_only=FLAGS.save_best_only, period=FLAGS.save_every)
+    ModelCheckpoint(str(save_dir / 'epoch-{epoch:d}.h5'), save_best_only=FLAGS.save_best_only, save_freq=FLAGS.save_every)
   ]
 
   # train
