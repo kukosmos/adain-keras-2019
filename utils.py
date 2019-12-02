@@ -11,4 +11,4 @@ def rm_dir(p):
   p.rmdir()
 
 def mse_loss(y_true, y_pred):
-  return K.mean(K.square(y_true - y_pred), keepdims=True)
+  return K.mean(K.square(y_true - y_pred))

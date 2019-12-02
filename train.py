@@ -6,7 +6,6 @@ from PIL import Image
 from PIL import ImageFile
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.callbacks import LearningRateScheduler
-# from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
@@ -44,28 +43,28 @@ flags.DEFINE_float('learning_rate_decay', default=5e-5, help='Learning rate deca
 flags.DEFINE_string('save_dir', default='./experiments', help='Directory to save trained models')
 flags.DEFINE_string('tensorboard', default='./logs', help='Directory to save tensorboard logs')
 flags.DEFINE_bool('save_best_only', default=False, help='Option to save one best model')
-flags.DEFINE_integer('save_every', default=10, help='Number of epochs between checkpoints')
+flags.DEFINE_integer('save_every', default=None, help='Number of batches between checkpoints, default=per_epoch')
 
 FLAGS = flags.FLAGS
 
 def calculate_style_loss(x, epsilon=1e-5):
   y_trues, y_preds = x
   loss = [
-    mse_loss(K.mean(y_true, axis=(1, 2), keepdims=True), K.mean(y_pred, axis=(1, 2), keepdims=True))
-    + mse_loss(K.sqrt(K.var(y_true, axis=(1, 2), keepdims=True) + epsilon), K.sqrt(K.var(y_pred, axis=(1, 2), keepdims=True) + epsilon))
+    mse_loss(K.mean(y_true, axis=(1, 2)), K.mean(y_pred, axis=(1, 2)))
+    + mse_loss(K.sqrt(K.var(y_true, axis=(1, 2)) + epsilon), K.sqrt(K.var(y_pred, axis=(1, 2)) + epsilon))
     for y_true, y_pred in zip(y_trues, y_preds)
   ]
-  return K.sum(loss, keepdims=True)
+  return K.sum(loss)
 
 def calculate_content_loss(x):
   y_trues, y_preds = x
   return mse_loss(y_trues[-1], y_preds[-1])
 
-class LayerCheckpoint(Callback):
-  def __init__(self, filepath, layer_name, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', save_freq='epoch', **kwargs):
-    super(LayerCheckpoint, self).__init__()
+class SubmodelCheckpoint(Callback):
+  def __init__(self, filepath, submodel_name, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', save_freq='epoch', **kwargs):
+    super(SubmodelCheckpoint, self).__init__()
     self.filepath = filepath
-    self.layer_name = layer_name
+    self.submodel_name = submodel_name
     self.monitor = monitor
     self.verbose = verbose
     self.save_best_only = save_best_only
@@ -90,6 +89,7 @@ class LayerCheckpoint(Callback):
       self.period = 1
     self.epochs_since_last_save = 0
     self.samples_since_last_save = 0
+    self.current_epoch = None
   
   def on_batch_end(self, batch, logs=None):
     logs = logs or {}
@@ -98,6 +98,9 @@ class LayerCheckpoint(Callback):
       if self.samples_since_last_save >= self.save_freq:
         self.save_model(name_dict={'batch': batch}, logs=logs)
         self.samples_since_last_save = 0
+
+  def on_epoch_start(self, epoch, logs=None):
+    self.current_epoch = epoch
 
   def on_epoch_end(self, epoch, logs=None):
     logs = logs or {}
@@ -109,12 +112,31 @@ class LayerCheckpoint(Callback):
 
   def save_model(self, name_dict=None, logs=None):
     name_dict = name_dict or {}
+    if 'epoch' not in name_dict:
+      name_dict['epoch'] = self.current_epoch
+    name_dict['epoch'] += 1
     logs = logs or {}
+    filepath = self.filepath.format(**name_dict, **logs)
+    submodel = self.model.get_layer(self.submodel_name)
     if self.save_best_only:
-      # TODO
+      current = logs.get(self.monitor)
+      if current is None:
+        logging.warning('Can save best model only with {} available, skipping.'.format(self.monitor))
+      else:
+        if self.monitor_op(current, self.best):
+          if self.verbose > 0:
+            print('\nEpoch {:5d}: {} improved from {:.5f} to {:.5f}, save model to {}'.format(self.current_epoch + 1, self.monitor, self.best, current, filepath))
+          if self.save_weights_only:
+            submodel.save_weights(filepath, overwrite=True)
+          else:
+            submodel.save(filepath, overwrite=True)
     else:
-      # TODO
-      
+      if self.verbose > 0:
+        print('\nEpoch {:5d}: save mode to {}'.format(self.current_epoch + 1, filepath))
+      if self.save_weights_only:
+        submodel.save_weights(filepath, overwrite=True)
+      else:
+        submodel.save(filepath, overwrite=True)
 
 def run():
 
@@ -148,11 +170,11 @@ def run():
   )
 
   # create model
-  encoder = Encoder(input_shape=(FLAGS.crop_size, FLAGS.crop_size, 3), pretrained=True)
+  encoder = Encoder(input_shape=(FLAGS.crop_size, FLAGS.crop_size, 3), pretrained=True, name='encoder')
   for l in encoder.layers:  # freeze the model
     l.trainable = False
-  adain = AdaIN(alpha=1.0)
-  decoder = Decoder(input_shape=encoder.output_shape[-1][1:])
+  adain = AdaIN(alpha=1.0, name='adain')
+  decoder = Decoder(input_shape=encoder.output_shape[-1][1:], name='decoder')
 
   # place holders for inputs
   content_input = Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3), name='content_input')
@@ -183,7 +205,7 @@ def run():
     # Tensor Board
     TensorBoard(str(log_dir), write_graph=False, update_freq='batch'),
     # save model
-    ModelCheckpoint(str(save_dir / 'epoch-{epoch:d}.h5'), save_best_only=FLAGS.save_best_only, save_freq=FLAGS.save_every)
+    SubmodelCheckpoint(str(save_dir / 'decoder.epoch-{epoch:d}.h5'), submodel_name='decoder', save_best_only=FLAGS.save_best_only, save_freq=FLAGS.save_every if FLAGS.save_every else 'epoch')
   ]
 
   # train
