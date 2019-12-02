@@ -4,12 +4,14 @@ from absl import logging
 from pathlib import Path
 from PIL import Image
 from PIL import ImageFile
+from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.callbacks import LearningRateScheduler
-from tensorflow.keras.callbacks import ModelCheckpoint
+# from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.models import Model
+import numpy as np
 import tensorflow.keras.backend as K
 import tensorflow.keras.optimizers as optimizers
 
@@ -58,6 +60,61 @@ def calculate_style_loss(x, epsilon=1e-5):
 def calculate_content_loss(x):
   y_trues, y_preds = x
   return mse_loss(y_trues[-1], y_preds[-1])
+
+class LayerCheckpoint(Callback):
+  def __init__(self, filepath, layer_name, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', save_freq='epoch', **kwargs):
+    super(LayerCheckpoint, self).__init__()
+    self.filepath = filepath
+    self.layer_name = layer_name
+    self.monitor = monitor
+    self.verbose = verbose
+    self.save_best_only = save_best_only
+    self.save_weights_only = save_weights_only
+    if mode == 'min':
+      self.monitor_op = np.min
+      self.best = np.Inf
+    elif mode == 'max':
+      self.monitor_op = np
+      self.best = -np.Inf
+    else: # mode == 'auto'
+      if 'acc' in self.monitor or self.monitor.startswith('fmeasure'):
+        self.monitor_op = np.max
+        self.best = -np.Inf
+      else: # monitor loss
+        self.monitor_op = np
+        self.best = np.Inf
+    self.save_freq = save_freq
+    if 'period' in kwargs:
+      self.period = kwargs['period']
+    else:
+      self.period = 1
+    self.epochs_since_last_save = 0
+    self.samples_since_last_save = 0
+  
+  def on_batch_end(self, batch, logs=None):
+    logs = logs or {}
+    if isinstance(self.save_freq, int):
+      self.samples_since_last_save += 1
+      if self.samples_since_last_save >= self.save_freq:
+        self.save_model(name_dict={'batch': batch}, logs=logs)
+        self.samples_since_last_save = 0
+
+  def on_epoch_end(self, epoch, logs=None):
+    logs = logs or {}
+    if self.save_freq == 'epoch':
+      self.epochs_since_last_save += 1
+      if self.epochs_since_last_save >= self.period:
+        self.save_model(name_dict={'epoch': epoch}, logs=logs)
+        self.epochs_since_last_save = 0
+
+  def save_model(self, name_dict=None, logs=None):
+    name_dict = name_dict or {}
+    logs = logs or {}
+    if self.save_best_only:
+      # TODO
+    else:
+      # TODO
+      
 
 def run():
 
