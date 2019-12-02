@@ -1,4 +1,4 @@
-from patlib import Path
+from pathlib import Path
 
 import numpy as np
 import math
@@ -70,17 +70,18 @@ class ContentStyleLoader(utils.Sequence):
       raise ValueError('The content_image_shape should be None (to use original shape of the image) or 2 dimensional tuple: {}'.format(content_image_shape))
     if not (content_crop is None or isinstance(content_crop_size, int) or len(content_crop_size) == 1 or len(content_crop_size == 2)):
       raise ValueError('The dimension of the cropped content image must be 1 (rectangle), 2: {}'.format(content_crop_size))
-    transform = lambda x: image.load_img(x, target_size=content_image_shape)
-    transform = lambda x: image.img_to_array(transform(x))
+    self.content_transform = [
+      lambda x: image.load_img(x, target_size=content_image_shape),
+      lambda x: image.img_to_array(x)
+    ]
     if content_crop is None:
       pass
     elif content_crop == 'random':
-      transform = lambda x: random_crop(transform(x), size=content_crop_size)
+      self.content_transform.append(lambda x: random_crop(x, size=content_crop_size))
     elif content_crop == 'center':
-      transform = lambda x: center_crop(transform(x), size=content_crop_size)
+      self.content_transform.append(lambda x: center_crop(x, size=content_crop_size))
     else:
       raise ValueError('Unsuppored crop option: {}'.format(content_crop))
-    self.content_transform = transform
 
     # content images
     self.style_root = style_root
@@ -102,29 +103,40 @@ class ContentStyleLoader(utils.Sequence):
       raise ValueError('The style_image_shape should be None (to use original shape of the image) or 2 dimensional tuple: {}'.format(style_image_shape))
     if not (style_crop is None or isinstance(style_crop_size, int) or len(style_crop_size) == 1 or len(style_crop_size == 2)):
       raise ValueError('The dimension of the cropped style image must be 1 (rectangle), 2: {}'.format(style_crop_size))
-    transform = lambda x: image.load_img(x, target_size=style_image_shape)
-    transform = lambda x: image.img_to_array(transform(x))
+    self.style_transform = [
+      lambda x: image.load_img(x, target_size=style_image_shape),
+      lambda x: image.img_to_array(x)
+    ]
     if style_crop is None:
       pass
     elif style_crop == 'random':
-      transform = lambda x: random_crop(transform(x), size=style_crop_size)
+      self.style_transform.append(lambda x: random_crop(x, size=style_crop_size))
     elif style_crop == 'center':
-      transform = lambda x: center_crop(transform(x), size=style_crop_size)
+      self.style_transform.append(lambda x: center_crop(x, size=style_crop_size))
     else:
       raise ValueError('Unsuppored crop option: {}'.format(style_crop))
-    self.style_transform = transform
 
   def __len__(self):
     return math.ceil(self.n_per_epoch / self.batch_size)
 
   def __getitem__(self, idx):
     # get content
-    batch_content = self.cur_content_indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-    batch_content = [self.content_transform(c) for c in batch_content]
+    idx_content = self.cur_content_indices[idx * self.batch_size:(idx + 1) * self.batch_size]
+    batch_content = []
+    for i in idx_content:
+      content = self.content_images[i]
+      for fn in self.content_transform:
+        content = fn(content)
+      batch_content.append(content)
 
     # get style
-    batch_style = self.cur_content_indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-    batch_style = [self.content_transform(s) for s in batch_style]
+    idx_style = self.cur_style_indices[idx * self.batch_size:(idx + 1) * self.batch_size]
+    batch_style = []
+    for i in idx_style:
+      style = self.style_images[i]
+      for fn in self.style_transform:
+        style = fn(style)
+      batch_style.append(style)
 
     return [np.array(batch_content), np.array(batch_style)], np.ones(self.batch_size, dtype=np.float32)
 

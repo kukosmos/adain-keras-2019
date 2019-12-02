@@ -1,2 +1,9 @@
 # python
 *.pyc
+
+# models
+*.h5
+
+# tensorboard
+events.out.tfevents.*
+*.trace
