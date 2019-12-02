@@ -70,17 +70,17 @@ class SubmodelCheckpoint(Callback):
     self.save_best_only = save_best_only
     self.save_weights_only = save_weights_only
     if mode == 'min':
-      self.monitor_op = np.min
+      self.monitor_op = np.less
       self.best = np.Inf
     elif mode == 'max':
-      self.monitor_op = np.max
+      self.monitor_op = np.greater
       self.best = -np.Inf
     else: # mode == 'auto'
       if 'acc' in self.monitor or self.monitor.startswith('fmeasure'):
-        self.monitor_op = np.max
+        self.monitor_op = np.greater
         self.best = -np.Inf
       else: # monitor loss
-        self.monitor_op = np.min
+        self.monitor_op = np.less
         self.best = np.Inf
     self.save_freq = save_freq
     if 'period' in kwargs:
