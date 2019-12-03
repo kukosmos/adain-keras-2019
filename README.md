@@ -8,3 +8,4 @@ Install following python libraries.
 * absl-py
 * Pillow
 * tensorflow
+* tqdm
