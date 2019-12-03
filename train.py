@@ -144,12 +144,12 @@ def run():
   save_dir = Path(FLAGS.save_dir)
   if save_dir.exists():
     logging.warning('The directory can be overwritten: {}'.format(FLAGS.save_dir))
-  save_dir.mkdir(exist_ok=True)
+  save_dir.mkdir(exist_ok=True, parents=True)
   log_dir = Path(FLAGS.tensorboard)
   if log_dir.exists():
     logging.warning('The directory will be removed: {}'.format(FLAGS.tensorboard))
     rm_path(log_dir)
-  log_dir.mkdir(exist_ok=True)
+  log_dir.mkdir(exist_ok=True, parents=True)
 
   # to handle errors while loading images
   Image.MAX_IMAGE_PIXELS = None
