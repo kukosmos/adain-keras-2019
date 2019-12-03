@@ -143,11 +143,11 @@ def run():
   # create directories
   save_dir = Path(FLAGS.save_dir)
   if save_dir.exists():
-    logging.warning('"save_dir={}" already exist. The files may be overwrited.'.format(FLAGS.save_dir))
+    logging.warning('The directory can be overwritten: {}'.format(FLAGS.save_dir))
   save_dir.mkdir(exist_ok=True)
   log_dir = Path(FLAGS.tensorboard)
   if log_dir.exists():
-    logging.warning('"tensorboard={}" already exist. The directory and contents will be removed.'.format(FLAGS.tensorboard))
+    logging.warning('The directory will be removed: {}'.format(FLAGS.tensorboard))
     rm_path(log_dir)
   log_dir.mkdir(exist_ok=True)
 
