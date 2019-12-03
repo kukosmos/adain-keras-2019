@@ -19,7 +19,7 @@ from network import AdaIN
 from network import Encoder
 from network import Decoder
 from utils import mse_loss
-from utils import rm_dir
+from utils import rm_path
 
 # dataset options
 flags.DEFINE_string('content_dir', default=None, help='Directory with content images', short_name='cd')
@@ -143,12 +143,12 @@ def run():
   # create directories
   save_dir = Path(FLAGS.save_dir)
   if save_dir.exists():
-    logging.warning('"save_dir={}" already exist. The files may be overwrited.'.format(FLAGS.save_dir))
+    logging.warning('The directory can be overwritten: {}'.format(FLAGS.save_dir))
   save_dir.mkdir(exist_ok=True)
   log_dir = Path(FLAGS.tensorboard)
   if log_dir.exists():
-    logging.warning('"tensorboard={}" already exist. The directory and contents will be removed.'.format(FLAGS.tensorboard))
-    rm_dir(log_dir)
+    logging.warning('The directory will be removed: {}'.format(FLAGS.tensorboard))
+    rm_path(log_dir)
   log_dir.mkdir(exist_ok=True)
 
   # to handle errors while loading images

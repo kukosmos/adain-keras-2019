@@ -1,13 +1,13 @@
 from pathlib import Path
 import tensorflow.keras.backend as K
 
-def rm_dir(p):
+def rm_path(p):
   p = Path(p)
   for child in p.glob('*'):
     if child.is_file():
       child.unlink()
     else:
-      rm_dir(child)
+      rm_path(child)
   p.rmdir()
 
 def mse_loss(y_true, y_pred):

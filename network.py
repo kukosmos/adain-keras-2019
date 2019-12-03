@@ -37,7 +37,8 @@ class AdaIN(layers.Layer):
 
 class Encoder(models.Model):
   def __init__(self, encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), pretrained=True, name='encoder', **kwargs):
-    assert len(encoder_layers) > 0, 'No "encoder_layers" is provided.'
+    if len(encoder_layers) == 0:
+      raise ValueError('No encoder_layers is provided.')
     
     vgg = VGG19(input_tensor=layers.Input(shape=input_shape), weights=('imagenet' if pretrained else None), include_top=False)
     output_layers = [vgg.get_layer(layer_name).output for layer_name in encoder_layers]
