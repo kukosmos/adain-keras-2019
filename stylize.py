@@ -5,7 +5,7 @@ from pathlib import Path
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Model
-from tensorflow.keras.preprocess.image import array_to_img
+from tensorflow.keras.preprocessing.image import array_to_img
 from tqdm import tqdm
 import numpy as np
 
@@ -73,7 +73,7 @@ def run():
   if output_dir.exists():
     logging.warning('The folder will be deleted: {}'.format(output_dir))
     rm_path(output_dir)
-  output_dir.mkdir(exist_ok=True)
+  output_dir.mkdir(exist_ok=True, parents=True)
   
   for content_path, content in tqdm(contents):
     
