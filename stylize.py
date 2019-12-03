@@ -13,7 +13,7 @@ from dataloader import load_image
 from network import AdaIN
 from network import Decoder
 from network import Encoder
-from utils import rm_dir
+from utils import rm_path
 
 # required options
 flags.DEFINE_list('contents', default=None, help='Paths to content images or directories that contain content images')
@@ -72,7 +72,7 @@ def run():
   output_dir = Path(FLAGS.output) / style_path.stem
   if output_dir.exists():
     logging.warning('The folder will be deleted: {}'.format(output_dir))
-    rm_dir(output_dir)
+    rm_path(output_dir)
   output_dir.mkdir(exist_ok=True)
   
   for content_path, content in tqdm(contents):
