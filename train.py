@@ -205,7 +205,7 @@ def run():
     # Tensor Board
     TensorBoard(str(log_dir), write_graph=False, update_freq='batch'),
     # save model
-    SubmodelCheckpoint(str(save_dir / 'decoder.epoch-{epoch:d}.h5'), submodel_name='decoder', save_best_only=FLAGS.save_best_only, save_freq=FLAGS.save_every if FLAGS.save_every else 'epoch')
+    SubmodelCheckpoint(str(save_dir / 'decoder.epoch-{epoch:d}.h5'), submodel_name='decoder', save_weights_only=True, save_best_only=FLAGS.save_best_only, save_freq=FLAGS.save_every if FLAGS.save_every else 'epoch')
   ]
 
   # train
