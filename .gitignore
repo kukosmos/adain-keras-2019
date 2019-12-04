@@ -13,3 +13,4 @@ events.out.tfevents.*
 *.png
 *.jpeg
 *.JPEG
+*.JPG
