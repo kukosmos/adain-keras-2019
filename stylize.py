@@ -33,40 +33,20 @@ FLAGS = flags.FLAGS
 
 def run():
   
-  # load data
-  contents = []
+  # paths to data
+  content_paths = []
   for c in FLAGS.contents:
     p = Path(c)
     if not p.exists():
       raise ValueError('The content image or directory is not exist: {}'.format(p))
     if p.is_dir():
       for f in p.glob('**/*.*'):
-        contents.append((f, load_image(f)))
+        content_paths.append(f)
     else:
-      contents.append((p, load_image(p)))
+      content_paths.append(p)
   style_path = Path(FLAGS.style)
   if not style_path.exists():
     raise ValueError('The style image is not exist: {}'.format(style_path))
-  style = np.expand_dims(load_image(style_path), axis=0)
-
-  # input place holder
-  content_input = Input(shape=(None, None, 3))
-  style_input = Input(shape=(None, None, 3))
-
-  # create model
-  if not Path(FLAGS.decoder).exists():
-    raise ValueError('The decoder model is not found: {}'.format(FLAGS.decoder))
-  encoder = Encoder(pretrained=True)
-  adain = AdaIN(alpha=FLAGS.alpha)
-  decoder = Decoder(input_shape=encoder.output_shape[-1][1:])
-  decoder.load_weights(FLAGS.decoder)
-  
-  content_feature = encoder(content_input)
-  style_feature = encoder(style_input)
-  normalized_feature = adain([content_feature[-1], style_feature[-1]])
-  generated = decoder(normalized_feature)
-  
-  stylizer = Model(inputs=[content_input, style_input], outputs=[generated])
 
   # output directory
   output_dir = Path(FLAGS.output) / style_path.stem
@@ -74,13 +54,35 @@ def run():
     logging.warning('The folder will be deleted: {}'.format(output_dir))
     rm_path(output_dir)
   output_dir.mkdir(exist_ok=True, parents=True)
-  
-  for content_path, content in tqdm(contents):
-    
-    # generate image
-    content = np.expand_dims(content, axis=0)
-    generated = stylizer.predict([content, style])
 
+  # create model
+  if not Path(FLAGS.decoder).exists():
+    raise ValueError('The decoder model is not found: {}'.format(FLAGS.decoder))
+  encoder = Encoder(pretrained=True)
+  content_feature_input = Input(shape=encoder.output_shape[-1][1:])
+  style_feature_input = Input(shape=encoder.output_shape[-1][1:])
+  adain = AdaIN(alpha=FLAGS.alpha)
+  adain = Model(inputs=[content_feature_input, style_feature_input], outputs=[adain([content_feature_input, style_feature_input])])
+  decoder = Decoder(input_shape=encoder.output_shape[-1][1:])
+  decoder.load_weights(FLAGS.decoder)
+  
+  # load and encode style image
+  style = np.expand_dims(load_image(style_path, crop='center', crop_size=256), axis=0)
+  style_feature = encoder.predict(style)[-1]
+
+  for content_path in tqdm(content_paths):
+    
+    # load and encode content image
+    content = load_image(content_path)
+    content = np.expand_dims(content, axis=0)
+    content_feature = encoder.predict(content)[-1]
+
+    # normalize the feature
+    normalized_feature = adain.predict([content_feature, style_feature])
+
+    # generate image
+    generated = decoder.predict(normalized_feature)
+    
     # save image
     img_path = output_dir / '{}.{}'.format(content_path.stem, FLAGS.ext)
     img = array_to_img(generated[0])
