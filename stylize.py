@@ -63,7 +63,7 @@ def run():
   
   content_feature = encoder(content_input)
   style_feature = encoder(style_input)
-  normalized_feature = adain([content_feature, style_feature])
+  normalized_feature = adain([content_feature[-1], style_feature[-1]])
   generated = decoder(normalized_feature)
   
   stylizer = Model(inputs=[content_input, style_input], outputs=[generated])
