@@ -3,7 +3,6 @@ from absl import flags
 from absl import logging
 from pathlib import Path
 from tensorflow.keras.layers import Input
-from tensorflow.keras.models import load_model
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import array_to_img
 from tqdm import tqdm
