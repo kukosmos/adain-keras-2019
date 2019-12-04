@@ -19,7 +19,7 @@ from utils import rm_path
 flags.DEFINE_list('contents', default=None, help='Paths to content images or directories that contain content images')
 flags.DEFINE_string('style', default=None, help='Path to a style image')
 flags.DEFINE_string('decoder', default=None, help='Path to the weights of the decoder')
-flags.mark_flags_as_required(['content', 'style', 'decoder'])
+flags.mark_flags_as_required(['contents', 'style', 'decoder'])
 
 # model option
 flags.DEFINE_float('alpha', default=1.0, help='The amount of stylization', lower_bound=0.0, upper_bound=1.0)
