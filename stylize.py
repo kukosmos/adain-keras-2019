@@ -23,6 +23,9 @@ flags.mark_flags_as_required(['contents', 'style', 'decoder'])
 # model option
 flags.DEFINE_float('alpha', default=1.0, help='The amount of stylization', lower_bound=0.0, upper_bound=1.0)
 
+# style image option
+flags.DEFINE_integer('style_size', default=256, help='The size of style image', lower_bound=1)
+
 # save options
 flags.DEFINE_string('ext', default='jpg', help='Extension name of generated images')
 flags.DEFINE_string('output', default='./generated', help='Directory for saving generated images')
@@ -66,7 +69,7 @@ def run():
   decoder.load_weights(FLAGS.decoder)
   
   # load and encode style image
-  style = np.expand_dims(load_image(style_path, crop='center', crop_size=256), axis=0)
+  style = np.expand_dims(load_image(style_path, image_shape=(FLAGS.style_size, FLAGS.style_size)), axis=0)
   style_feature = encoder.predict(style)[-1]
 
   for content_path in tqdm(content_paths):
