@@ -29,7 +29,6 @@ flags.DEFINE_integer('style_size', default=256, help='The size of style image', 
 # save options
 flags.DEFINE_string('ext', default='jpg', help='Extension name of generated images')
 flags.DEFINE_string('output', default='./generated', help='Directory for saving generated images')
-flags.DEFINE_bool('preserve_color', default=False, help='Option for preserving the color of content images')
 
 FLAGS = flags.FLAGS
 
