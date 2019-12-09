@@ -26,6 +26,10 @@ class AdaIN(layers.Layer):
   def compute_output_shape(self, input_shape):
     return input_shape[0]
 
+  def set_alpha(self, alpha):
+    self.alpha = alpha
+    return self.alpha
+
   def call(self, x):
     content_features, style_features = x
     content_mean = K.mean(content_features, axis=[1, 2], keepdims=True)
