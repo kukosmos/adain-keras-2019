@@ -16,6 +16,13 @@ class ReflectionPad(layers.Layer):
     x = K.concatenate([K.reverse(x, 1)[:, (-1 - self.pad_left):-1, :, :], x, K.reverse(x, 1)[:, 1:(1 + self.pad_right), :, :]], axis=1)
     x = K.concatenate([K.reverse(x, 2)[:, :, (-1 - self.pad_top):-1, :], x, K.reverse(x, 2)[:, :, 1:(1 + self.pad_bottom), :]], axis=2)
     return x
+  
+  def get_config(self):
+    config = super(ReflectionPad, self).get_config().copy()
+    config.update({
+      'padding': (self.pad_left, self.pad_right, self.pad_top, self.pad_bottom)
+    })
+    return config
 
 class AdaIN(layers.Layer):
   def __init__(self, name='adain', alpha=1.0, epsilon=1e-5, **kwargs):
@@ -47,13 +54,25 @@ class Encoder(models.Model):
   def __init__(self, encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), pretrained=True, name='encoder', **kwargs):
     if len(encoder_layers) == 0:
       raise ValueError('No encoder_layers is provided.')
+    self.encode_layers = encode_layers
+    self.input_shape = input_shape
     
     vgg = VGG19(input_tensor=layers.Input(shape=input_shape), weights=('imagenet' if pretrained else None), include_top=False)
     output_layers = [vgg.get_layer(layer_name).output for layer_name in encoder_layers]
     super(Encoder, self).__init__(inputs=vgg.input, outputs=output_layers, name=name, **kwargs)
+    
+  def get_config(self):
+    config = super(Encoder, self).get_config().copy()
+    config.update({
+      'encode_layers': self.encode_layers,
+      'input_shape': self.input_shape
+    })
+    return config
 
 class Decoder(models.Model):
   def __init__(self, input_shape=(None, None, 512), name='decoder', **kwargs):
+    self.input_shape = input_shape
+    
     input_layer = layers.Input(shape=input_shape)
     out = ReflectionPad((1, 1, 1, 1), name='block4_reflection1')(input_layer)
     out = layers.Conv2D(256, (3, 3), activation='relu', name='block4_conv1')(out)
@@ -77,3 +96,10 @@ class Decoder(models.Model):
     out = ReflectionPad((1, 1, 1, 1), name='block1_reflection1')(out)
     out = layers.Conv2D(3, (3, 3), name='block1_conv1')(out)
     super(Decoder, self).__init__(inputs=input_layer, outputs=out, name=name, **kwargs)
+
+  def get_config(self):
+    config = super(Decoder, self).get_config().copy()
+    config.update({
+      'input_shape': self.input_shape
+    })
+    return config
