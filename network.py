@@ -55,7 +55,7 @@ class Encoder(models.Model):
     if len(encoder_layers) == 0:
       raise ValueError('No encoder_layers is provided.')
     self.encoder_layers = encoder_layers
-    self.input_shape = input_shape
+    self.inputshape = input_shape
     
     vgg = VGG19(input_tensor=layers.Input(shape=input_shape), weights=('imagenet' if pretrained else None), include_top=False)
     output_layers = [vgg.get_layer(layer_name).output for layer_name in encoder_layers]
@@ -65,13 +65,13 @@ class Encoder(models.Model):
     config = super(Encoder, self).get_config().copy()
     config.update({
       'encoder_layers': self.encoder_layers,
-      'input_shape': self.input_shape
+      'input_shape': self.inputshape
     })
     return config
 
 class Decoder(models.Model):
   def __init__(self, input_shape=(None, None, 512), name='decoder', **kwargs):
-    self.input_shape = input_shape
+    self.inputshape = input_shape
     
     input_layer = layers.Input(shape=input_shape)
     out = ReflectionPad((1, 1, 1, 1), name='block4_reflection1')(input_layer)
@@ -100,6 +100,6 @@ class Decoder(models.Model):
   def get_config(self):
     config = super(Decoder, self).get_config().copy()
     config.update({
-      'input_shape': self.input_shape
+      'input_shape': self.inputshape
     })
     return config
