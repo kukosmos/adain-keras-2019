@@ -54,7 +54,7 @@ class Encoder(models.Model):
   def __init__(self, encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), pretrained=True, name='encoder', **kwargs):
     if len(encoder_layers) == 0:
       raise ValueError('No encoder_layers is provided.')
-    self.encode_layers = encode_layers
+    self.encoder_layers = encoder_layers
     self.input_shape = input_shape
     
     vgg = VGG19(input_tensor=layers.Input(shape=input_shape), weights=('imagenet' if pretrained else None), include_top=False)
@@ -64,7 +64,7 @@ class Encoder(models.Model):
   def get_config(self):
     config = super(Encoder, self).get_config().copy()
     config.update({
-      'encode_layers': self.encode_layers,
+      'encoder_layers': self.encoder_layers,
       'input_shape': self.input_shape
     })
     return config
