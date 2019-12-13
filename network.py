@@ -34,6 +34,14 @@ class AdaIN(layers.Layer):
     style_std = K.sqrt(K.var(style_features, axis=[1, 2], keepdims=True) + self.epsilon)
     normalized_content_features = (content_features - content_mean) / (content_std + self.epsilon) * style_std + style_mean
     return self.alpha * normalized_content_features + (1 - self.alpha) * content_features
+  
+  def get_config(self):
+    config = super(AdaIN, self).get_config().copy()
+    config.update({
+      'alpha': self.alpha,
+      'epsilon': self.epsilon
+    })
+    return config
 
 class Encoder(models.Model):
   def __init__(self, encoder_layers=['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1'], input_shape=(None, None, 3), pretrained=True, name='encoder', **kwargs):
