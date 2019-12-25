@@ -154,3 +154,23 @@ class ContentStyleLoader(utils.Sequence):
       self.style_indices.extend(np.random.permutation(self.n_style))
     self.cur_style_indices = self.style_indices[:self.n_per_epoch]
     self.style_indices = self.style_indices[self.n_per_epoch:]
+
+def load_image(filepath, image_shape=None, crop=None, crop_size=None):
+  filepath = Path(filepath)
+  if not filepath.exists() or filepath.is_dir():
+    raise ValueError('The file is not exists: {}'.format(filepath))
+  if image_shape is not None and len(image_shape) != 2:
+    raise ValueError('The image_shape should be None (to use original shape of the image) or 2 dimensional tuple: {}'.format(image_shape))
+  img = image.load_img(filepath, target_size=image_shape)
+  img = image.img_to_array(img)
+  if not (crop is None or isinstance(crop_size, int) or len(crop_size) == 1 or len(crop_size == 2)):
+    raise ValueError('The dimension of the cropped image must be 1 (rectangle), 2: {}'.format(crop_size))
+  if crop is None:
+    pass
+  elif crop == 'random':
+    img = random_crop(img, size=crop_size)
+  elif crop == 'center':
+    img = center_crop(img, size=crop_size)
+  else:
+    raise ValueError('Unsupported crop option: {}'.format(crop))
+  return img

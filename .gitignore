@@ -7,3 +7,10 @@
 # tensorboard
 events.out.tfevents.*
 *.trace
+
+# images
+*.jpg
+*.png
+*.jpeg
+*.JPEG
+*.JPG
