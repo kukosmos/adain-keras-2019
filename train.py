@@ -57,8 +57,8 @@ def calculate_style_loss(x, epsilon=1e-5):
   return K.sum(loss)
 
 def calculate_content_loss(x):
-  y_trues, y_preds = x
-  return mse_loss(y_trues[-1], y_preds[-1])
+  y_true, y_pred = x
+  return mse_loss(y_true, y_pred)
 
 class SubmodelCheckpoint(Callback):
   def __init__(self, filepath, submodel_name, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', save_freq='epoch', **kwargs):
@@ -183,12 +183,12 @@ def run():
   # forwarding
   content_features = encoder(content_input)
   style_features = encoder(style_input)
-  normalized_features = adain([content_features[-1], style_features[-1]])
-  generated = decoder(normalized_features)
+  normalized_feature = adain([content_features[-1], style_features[-1]])
+  generated = decoder(normalized_feature)
 
   # loss calculation
   generated_features = encoder(generated)
-  content_loss = Lambda(calculate_content_loss, name='content_loss')([content_features, generated_features])
+  content_loss = Lambda(calculate_content_loss, name='content_loss')([normalized_feature, generated_features[-1])
   style_loss = Lambda(calculate_style_loss, name='style_loss')([style_features, generated_features])
   loss = Lambda(lambda x: FLAGS.content_weight * x[0] + FLAGS.style_weight * x[1], name='loss')([content_loss, style_loss])
 
