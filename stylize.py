@@ -2,6 +2,7 @@ from absl import app
 from absl import flags
 from absl import logging
 from pathlib import Path
+from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.layers import Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import array_to_img
@@ -59,12 +60,15 @@ def run():
   # create model
   if not Path(FLAGS.decoder).exists():
     raise ValueError('The decoder model is not found: {}'.format(FLAGS.decoder))
-  encoder = Encoder(pretrained=True)
+  encoder = Encoder()
+  vgg = VGG19(input_tensor=Input(shape=(None, None, 3)), weights='imagenet', include_top=False)
+  encoder.load_vgg(vgg=vgg)
+  
   content_feature_input = Input(shape=encoder.output_shape[-1][1:])
   style_feature_input = Input(shape=encoder.output_shape[-1][1:])
   adain = AdaIN(alpha=FLAGS.alpha)
   adain = Model(inputs=[content_feature_input, style_feature_input], outputs=[adain([content_feature_input, style_feature_input])])
-  decoder = Decoder(input_shape=encoder.output_shape[-1][1:])
+  decoder = Decoder()
   decoder.load_weights(FLAGS.decoder)
   
   # load and encode style image
