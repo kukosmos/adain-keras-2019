@@ -4,6 +4,7 @@ from absl import logging
 from pathlib import Path
 from PIL import Image
 from PIL import ImageFile
+from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.callbacks import LearningRateScheduler
 from tensorflow.keras.callbacks import TensorBoard
@@ -170,11 +171,16 @@ def run():
   )
 
   # create model
-  encoder = Encoder(input_shape=(FLAGS.crop_size, FLAGS.crop_size, 3), pretrained=True, name='encoder')
-  for l in encoder.layers:  # freeze the model
-    l.trainable = False
+  encoder = Encoder(name='encoder')
   adain = AdaIN(alpha=1.0, name='adain')
-  decoder = Decoder(input_shape=encoder.output_shape[-1][1:], name='decoder')
+  decoder = Decoder(name='decoder')
+
+  # load encoder weights
+  vgg = VGG19(input_tensor=Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3)), weights='imagenet', include_top=False)
+  encoder.load_vgg(vgg=vgg)
+  # freeze the model
+  for l in encoder.layers:
+    l.trainable = False
 
   # place holders for inputs
   content_input = Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3), name='content_input')
