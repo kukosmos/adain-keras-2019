@@ -171,16 +171,12 @@ def run():
   )
 
   # create model
-  encoder = Encoder(name='encoder')
-  adain = AdaIN(alpha=1.0, name='adain')
-  decoder = Decoder(name='decoder')
-
-  # load encoder weights
-  vgg = VGG19(input_tensor=Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3)), weights='imagenet', include_top=False)
-  encoder.load_vgg(vgg=vgg)
+  encoder = Encoder(input_shape=(FLAGS.crop_size, FLAGS.crop_size, 3), pretrained=True, name='encoder')
   # freeze the model
   for l in encoder.layers:
     l.trainable = False
+  adain = AdaIN(alpha=1.0, name='adain')
+  decoder = Decoder(input_shape=encoder.output_shape[-1][1:], name='decoder')
 
   # place holders for inputs
   content_input = Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3), name='content_input')
@@ -194,7 +190,7 @@ def run():
 
   # loss calculation
   generated_features = encoder(generated)
-  content_loss = Lambda(calculate_content_loss, name='content_loss')([normalized_feature, generated_features[-1])
+  content_loss = Lambda(calculate_content_loss, name='content_loss')([normalized_feature, generated_features[-1]])
   style_loss = Lambda(calculate_style_loss, name='style_loss')([style_features, generated_features])
   loss = Lambda(lambda x: FLAGS.content_weight * x[0] + FLAGS.style_weight * x[1], name='loss')([content_loss, style_loss])
 

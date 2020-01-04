@@ -59,7 +59,7 @@ def run():
   # create model
   if not Path(FLAGS.decoder).exists():
     raise ValueError('The decoder model is not found: {}'.format(FLAGS.decoder))
-  encoder = Encoder(pretrained=True)
+  encoder = Encoder(input_shape=(None, None, 3), pretrained=True)
   content_feature_input = Input(shape=encoder.output_shape[-1][1:])
   style_feature_input = Input(shape=encoder.output_shape[-1][1:])
   adain = AdaIN(alpha=FLAGS.alpha)
