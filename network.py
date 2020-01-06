@@ -9,7 +9,10 @@ class ReflectionPad(layers.Layer):
     self.pad_left, self.pad_right, self.pad_top, self.pad_bottom = padding
 
   def compute_output_shape(self, input_shape):
-    return (input_shape[0], input_shape[1] + self.pad_left + self.pad_right, input_shape[2] + self.pad_top + self.pad_bottom, input_shape[3])
+    try:
+      super(ReflectionPad, self).compute_output_shape(input_shape=input_shape)
+    except NotImplementedError:
+      return (input_shape[0], input_shape[1] + self.pad_left + self.pad_right, input_shape[2] + self.pad_top + self.pad_bottom, input_shape[3])
 
   def call(self, x):
     x = K.concatenate([K.reverse(x, 1)[:, (-1 - self.pad_left):-1, :, :], x, K.reverse(x, 1)[:, 1:(1 + self.pad_right), :, :]], axis=1)
@@ -30,7 +33,10 @@ class AdaIN(layers.Layer):
     self.epsilon = epsilon
 
   def compute_output_shape(self, input_shape):
-    return input_shape[0]
+    try:
+      super(AdaIN, self).compute_output_shape(input_shape=input_shape)
+    except NotImplementedError:
+      return input_shape[0]
 
   def call(self, x):
     content_features, style_features = x
