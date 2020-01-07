@@ -4,6 +4,7 @@ from absl import logging
 from pathlib import Path
 from PIL import Image
 from PIL import ImageFile
+from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.callbacks import Callback
 from tensorflow.keras.callbacks import LearningRateScheduler
 from tensorflow.keras.callbacks import TensorBoard
@@ -57,8 +58,8 @@ def calculate_style_loss(x, epsilon=1e-5):
   return K.sum(loss)
 
 def calculate_content_loss(x):
-  y_trues, y_preds = x
-  return mse_loss(y_trues[-1], y_preds[-1])
+  y_true, y_pred = x
+  return mse_loss(y_true, y_pred)
 
 class SubmodelCheckpoint(Callback):
   def __init__(self, filepath, submodel_name, monitor='val_loss', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', save_freq='epoch', **kwargs):
@@ -170,11 +171,16 @@ def run():
   )
 
   # create model
-  encoder = Encoder(input_shape=(FLAGS.crop_size, FLAGS.crop_size, 3), pretrained=True, name='encoder')
-  for l in encoder.layers:  # freeze the model
-    l.trainable = False
+  encoder = Encoder(name='encoder')
   adain = AdaIN(alpha=1.0, name='adain')
-  decoder = Decoder(input_shape=encoder.output_shape[-1][1:], name='decoder')
+  decoder = Decoder(name='decoder')
+
+  # load encoder weights
+  vgg = VGG19(input_tensor=Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3)), weights='imagenet', include_top=False)
+  encoder.load_vgg(vgg=vgg)
+  # freeze the model
+  for l in encoder.layers:
+    l.trainable = False
 
   # place holders for inputs
   content_input = Input(shape=(FLAGS.crop_size, FLAGS.crop_size, 3), name='content_input')
@@ -183,12 +189,12 @@ def run():
   # forwarding
   content_features = encoder(content_input)
   style_features = encoder(style_input)
-  normalized_features = adain([content_features[-1], style_features[-1]])
-  generated = decoder(normalized_features)
+  normalized_feature = adain([content_features[-1], style_features[-1]])
+  generated = decoder(normalized_feature)
 
   # loss calculation
   generated_features = encoder(generated)
-  content_loss = Lambda(calculate_content_loss, name='content_loss')([content_features, generated_features])
+  content_loss = Lambda(calculate_content_loss, name='content_loss')([normalized_feature, generated_features[-1])
   style_loss = Lambda(calculate_style_loss, name='style_loss')([style_features, generated_features])
   loss = Lambda(lambda x: FLAGS.content_weight * x[0] + FLAGS.style_weight * x[1], name='loss')([content_loss, style_loss])
 
