@@ -11,7 +11,7 @@ Install following python libraries.
 * tqdm
 
 ## Colab
-We offer [training script](https://colab.research.google.com/github/kukosmos/adain-keras-2019/colab.ipynb) using colab.
+We offer [training script](https://colab.research.google.com/github/kukosmos/adain-keras-2019/blob/master/colab.ipynb) using colab.
 To use colab training script, you need to set the parameters (i.e. content\_path, style\_path, and model\_dir)
 before run the script.
 
