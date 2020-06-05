@@ -1,6 +1,9 @@
 # python
 *.pyc
 
+# jupyter
+.ipynb_checkpoints
+
 # models
 *.h5
 
